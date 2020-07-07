@@ -26,6 +26,10 @@ Requirements:
 - the response must contain the scaled image as file
 - make sure to delete all downloaded files
 
+**Test using**
+```
+curl -X GET -H "Content-type: application/json" -d '{"imageUrl":"https://upload.wikimedia.org/wikipedia/commons/3/39/Lichtenstein_img_processing_test.png", "scaleFactor":0.05}'  http://localhost:5001/capturalcodingchallenge/us-central1/downscaleImage -OJ
+```
 ## Authentication Challenge
 The project uses [Firebase Authentication](https://firebase.google.com/docs/auth)
 

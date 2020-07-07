@@ -6,8 +6,8 @@ import {ScalePictureInstruction, ScalePictureInstructionType} from "../types/typ
 import * as E from 'fp-ts/lib/Either'
 import * as Stream from "stream";
 import got from 'got';
-import * as pumpify from 'pumpify';
-import * as ImageDimensionSteam from 'image-dimensions-stream'
+import pumpify from 'pumpify';
+import ImageDimensionSteam from 'image-dimensions-stream'
 import sharp = require("sharp");
 import {tryCatchK} from "fp-ts/lib/TaskEither";
 

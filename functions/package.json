@@ -15,6 +15,7 @@
   },
   "main": "lib/index.js",
   "dependencies": {
+    "@types/got": "^9.6.11",
     "@types/pumpify": "^1.4.1",
     "@types/sharp": "^0.25.0",
     "firebase-admin": "^8.10.0",
