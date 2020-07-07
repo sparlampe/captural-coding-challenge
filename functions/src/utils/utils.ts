@@ -9,3 +9,8 @@ export const createHeaders = (imageUrl: string, scaleFactor: number) => {
         ["Content-Disposition", `attachment; filename="${newFileName}"`]
     ]
 }
+
+export const scaleDimensions = (scaleFactor: number, origWidth: number | undefined, origHeight: number | undefined) => ({
+    newWidth: origWidth ? Math.round(origWidth * scaleFactor) : null,
+    newHeight: origHeight ? Math.round(origHeight * scaleFactor) : null,
+})
