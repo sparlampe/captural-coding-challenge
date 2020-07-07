@@ -4,6 +4,12 @@ import {pipe} from "fp-ts/lib/pipeable";
 import {PathReporter} from "io-ts/lib/PathReporter";
 import {ScalePictureInstruction, ScalePictureInstructionType} from "../types/types";
 import * as E from 'fp-ts/lib/Either'
+import * as Stream from "stream";
+import got from 'got';
+import * as pumpify from 'pumpify';
+import * as ImageDimensionSteam from 'image-dimensions-stream'
+import sharp = require("sharp");
+import {tryCatchK} from "fp-ts/lib/TaskEither";
 
 export const createHeaders = (imageUrl: string, scaleFactor: number) => {
     const [fileName, format] = basename(parse(imageUrl).pathname || "originalFile").split(".")
@@ -28,3 +34,34 @@ export interface ErrorWithStatus {
     status: number
     msg: string | string[]
 }
+
+export interface PictureWithScaleInstruction {
+    pictureStream: Stream.Stream,
+    instruction: ScalePictureInstruction
+}
+
+export const createPictureStream = (instruction: ScalePictureInstruction): PictureWithScaleInstruction => ({pictureStream: got.stream(instruction.imageUrl), instruction})
+
+export const getScaledPictureStream = async ({pictureStream, instruction}:PictureWithScaleInstruction) => {
+    const dimsStream: Stream.Transform  = new ImageDimensionSteam()
+    const dimsPromise: Promise<{dimensions: {width: number, height: number}, pictureStream: Stream.Readable}> = new Promise((resolve, reject) => {
+        const dimPictureStream = new pumpify(pictureStream, dimsStream)
+        dimPictureStream.on('error', reject)
+        dimsStream.on("dimensions",(dimensions) => {
+            resolve({dimensions, pictureStream: dimPictureStream})
+        })
+        dimsStream.on("dimensions",(dimensions) => {
+            resolve({dimensions, pictureStream: dimPictureStream})
+        })
+    })
+
+    const dims = await  dimsPromise
+    const {newWidth, newHeight} = scaleDimensions(instruction.scaleFactor, dims.dimensions.width, dims.dimensions.height)
+
+    return {
+        pictureStream: new pumpify(dims.pictureStream, sharp().resize(newWidth, newHeight)),
+        instruction: instruction
+    }
+}
+
+export const getScaledPictureStreamTask = tryCatchK(getScaledPictureStream, (e): ErrorWithStatus => ({status: 500, msg: `Could not determine size, error ${(e as Error).toString()}`}))
