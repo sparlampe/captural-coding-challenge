@@ -31,6 +31,7 @@
     "sharp": "^0.25.4"
   },
   "devDependencies": {
+    "@firebase/testing": "^0.20.5",
     "@types/jest": "^26.0.4",
     "firebase-functions-test": "^0.2.0",
     "jest": "^26.1.0",
