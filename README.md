@@ -64,6 +64,7 @@ Requirements:
 * users can read and write to their private document and subcollections under '/users/{userID}'
 * deny access to any other users
 
+**Test by running the tests**
 
 ## Storage Challenge
 
