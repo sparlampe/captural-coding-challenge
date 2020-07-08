@@ -38,6 +38,11 @@ Requirements:
 * make sure that downscaleImage service does not handle requests of anonymous users
 * throw an exception if the use is not authenticated
 
+**Test using**
+```
+curl 'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=YOUR_APP_KEY' -H 'Content-Type: application/json' --data-binary '{"email":"your_alias@somemail.com","password":"your_password","returnSecureToken":true}'
+curl -X GET -H "Content-type: application/json" -d '{"imageUrl":"https://upload.wikimedia.org/wikipedia/commons/3/39/Lichtenstein_img_processing_test.png", "scaleFactor":0.55}' -H"Authorization:Bearer YOUR_ID_TOKEN" http://localhost:5001/challenge/us-central1/downscaleImage
+```
 ## Firestore Challenge
 
 Requirements:
