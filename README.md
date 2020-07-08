@@ -84,6 +84,11 @@ Requirements:
 * return the url of the image on Firebase Storage
 * adapt the storage security rules
 
+**Test by issuing the following and retrieving the file under returned url**
+```
+curl -X GET -H "Content-type: application/json" -d '{"upload": true, imageUrl":"https://upload.wikimedia.org/wikipedia/commons/3/39/Lichtenstein_img_processing_test.png", "scaleFactor":0.55}' -H"Authorization:Bearer YOUR_ID_TOKEN" http://localhost:5001/capturalcodingchallenge/us-central1/downscaleImage
+```
+
 # Bonus
 * add Unit tests infrastructure
 * add Unit tests for downscaleImage
