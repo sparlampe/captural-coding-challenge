@@ -9,7 +9,8 @@ import got from 'got';
 import pumpify from 'pumpify';
 import ImageDimensionSteam from 'image-dimensions-stream'
 import sharp = require("sharp");
-import {tryCatchK} from "fp-ts/lib/TaskEither";
+import {chain, fromEither, tryCatchK} from "fp-ts/lib/TaskEither";
+import * as admin from 'firebase-admin';
 
 export const createHeaders = (imageUrl: string, scaleFactor: number) => {
     const [fileName, format] = basename(parse(imageUrl).pathname || "originalFile").split(".")
@@ -65,3 +66,20 @@ export const getScaledPictureStream = async ({pictureStream, instruction}:Pictur
 }
 
 export const getScaledPictureStreamTask = tryCatchK(getScaledPictureStream, (e): ErrorWithStatus => ({status: 500, msg: `Could not determine size, error ${(e as Error).toString()}`}))
+
+export interface WithHeader {
+    header(name: string): string | undefined
+}
+
+export const extractToken= (request: WithHeader): E.Either<ErrorWithStatus, string> => {
+    const authHeader = request.header('Authorization')
+    const [bearer, token] = (authHeader||"").split(" ")
+    return (bearer=== "Bearer" && token) ? E.right(token) : E.left({status: 403, msg: "Authorization header missing."})
+}
+
+export const getVerifiedIdToken = (verifier: (arg0:string)=>Promise<admin.auth.DecodedIdToken>) => (request: WithHeader) => pipe(
+    request,
+    extractToken,
+    fromEither,
+    chain(tryCatchK(verifier, (e): ErrorWithStatus => ({status:403, msg: (e as Error).toString()}))),
+)

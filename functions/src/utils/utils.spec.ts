@@ -1,7 +1,15 @@
-import {createHeaders, scaleDimensions, getScalingInstruction, getScaledPictureStream} from "./utils";
+import {
+    createHeaders,
+    scaleDimensions,
+    getScalingInstruction,
+    getScaledPictureStream,
+    extractToken,
+    getVerifiedIdToken
+} from "./utils";
 import {isLeft, right} from "fp-ts/lib/Either";
 import * as fs from 'fs'
 import {ScalePictureInstruction} from "../types/types";
+import * as admin from "firebase-admin";
 
 describe('createHeaders', () => {
     it('should create content type and disposition headers', () => {
@@ -47,5 +55,29 @@ describe('getScaledPictureStream', () => {
         const scaleTransform = await getScaledPictureStream({pictureStream, instruction})
         expect(scaleTransform.instruction).toEqual(instruction);
         expect(consumedBytes).toEqual(65536); // default buffer size for image-dimension-stream
+    });
+});
+
+describe('extractToken', () => {
+    it('should return a right with token if exists on request', async () => {
+        expect(extractToken({header: (_)=> "Bearer myToken"})).toEqual(right("myToken"));
+    });
+
+    it('should return a left if token does not exist on request', async () => {
+        const tokenInvalidResult = extractToken({header: (_)=> undefined})
+        expect(isLeft(tokenInvalidResult)).toBeTruthy();
+    });
+});
+
+describe('getVerifiedIdToken', () => {
+    it('should return a right with token if exists on request', async () => {
+        const testToken = {uid: "myUserId"} as admin.auth.DecodedIdToken
+        const validResult = await getVerifiedIdToken((_) => Promise.resolve(testToken))({header: (_)=> "Bearer myToken"})()
+        expect(validResult).toEqual(right(testToken));
+    });
+
+    it('should return a left if token does not exist on request', async () => {
+        const tokenInvalidResult = await getVerifiedIdToken((_) => Promise.reject(new Error("Token invalid")))({header: (_)=> "Bearer myToken"})()
+        expect(isLeft(tokenInvalidResult)).toBeTruthy();
     });
 });
