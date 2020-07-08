@@ -26,9 +26,9 @@ export const scaleDimensions = (scaleFactor: number, origWidth: number | undefin
     newHeight: origHeight ? Math.round(origHeight * scaleFactor) : null,
 })
 
-export const getScalingInstruction = (reqBody: any):E.Either<ErrorWithStatus,ScalePictureInstruction> => pipe(
+export const getScalingInstruction = (reqBody: any): E.Either<ErrorWithStatus, ScalePictureInstruction> => pipe(
     ScalePictureInstructionType.decode(reqBody),
-    E.mapLeft((e):ErrorWithStatus => ({status:422, msg: PathReporter.report(E.left(e))}))
+    E.mapLeft((e): ErrorWithStatus => ({status: 422, msg: PathReporter.report(E.left(e))}))
 )
 
 export interface ErrorWithStatus {
@@ -41,22 +41,25 @@ export interface PictureWithScaleInstruction {
     instruction: ScalePictureInstruction
 }
 
-export const createPictureStream = (instruction: ScalePictureInstruction): PictureWithScaleInstruction => ({pictureStream: got.stream(instruction.imageUrl), instruction})
+export const createPictureStream = (instruction: ScalePictureInstruction): PictureWithScaleInstruction => ({
+    pictureStream: got.stream(instruction.imageUrl),
+    instruction
+})
 
-export const getScaledPictureStream = async ({pictureStream, instruction}:PictureWithScaleInstruction) => {
-    const dimsStream: Stream.Transform  = new ImageDimensionSteam()
-    const dimsPromise: Promise<{dimensions: {width: number, height: number}, pictureStream: Stream.Readable}> = new Promise((resolve, reject) => {
+export const getScaledPictureStream = async ({pictureStream, instruction}: PictureWithScaleInstruction) => {
+    const dimsStream: Stream.Transform = new ImageDimensionSteam()
+    const dimsPromise: Promise<{ dimensions: { width: number, height: number }, pictureStream: Stream.Readable }> = new Promise((resolve, reject) => {
         const dimPictureStream = new pumpify(pictureStream, dimsStream)
         dimPictureStream.on('error', reject)
-        dimsStream.on("dimensions",(dimensions) => {
+        dimsStream.on("dimensions", (dimensions) => {
             resolve({dimensions, pictureStream: dimPictureStream})
         })
-        dimsStream.on("dimensions",(dimensions) => {
+        dimsStream.on("dimensions", (dimensions) => {
             resolve({dimensions, pictureStream: dimPictureStream})
         })
     })
 
-    const dims = await  dimsPromise
+    const dims = await dimsPromise
     const {newWidth, newHeight} = scaleDimensions(instruction.scaleFactor, dims.dimensions.width, dims.dimensions.height)
 
     return {
@@ -65,21 +68,40 @@ export const getScaledPictureStream = async ({pictureStream, instruction}:Pictur
     }
 }
 
-export const getScaledPictureStreamTask = tryCatchK(getScaledPictureStream, (e): ErrorWithStatus => ({status: 500, msg: `Could not determine size, error ${(e as Error).toString()}`}))
+export const getScaledPictureStreamTask = tryCatchK(getScaledPictureStream, (e): ErrorWithStatus => ({
+    status: 500,
+    msg: `Could not determine size, error ${(e as Error).toString()}`
+}))
 
 export interface WithHeader {
     header(name: string): string | undefined
 }
 
-export const extractToken= (request: WithHeader): E.Either<ErrorWithStatus, string> => {
+export const extractToken = (request: WithHeader): E.Either<ErrorWithStatus, string> => {
     const authHeader = request.header('Authorization')
-    const [bearer, token] = (authHeader||"").split(" ")
-    return (bearer=== "Bearer" && token) ? E.right(token) : E.left({status: 403, msg: "Authorization header missing."})
+    const [bearer, token] = (authHeader || "").split(" ")
+    return (bearer === "Bearer" && token) ? E.right(token) : E.left({status: 403, msg: "Authorization header missing."})
 }
 
-export const getVerifiedIdToken = (verifier: (arg0:string)=>Promise<admin.auth.DecodedIdToken>) => (request: WithHeader) => pipe(
+export const getVerifiedIdToken = (verifier: (arg0: string) => Promise<admin.auth.DecodedIdToken>) => (request: WithHeader) => pipe(
     request,
     extractToken,
     fromEither,
-    chain(tryCatchK(verifier, (e): ErrorWithStatus => ({status:403, msg: (e as Error).toString()}))),
+    chain(tryCatchK(verifier, (e): ErrorWithStatus => ({status: 403, msg: (e as Error).toString()}))),
 )
+
+const saveInstruction = (db: admin.firestore.Firestore) => (idToken: admin.auth.DecodedIdToken, instruction: ScalePictureInstruction) =>
+    db.collection("users")
+        .doc(idToken.uid).set({}, {merge: true})
+        .then(() =>
+            db.collection("users")
+                .doc(idToken.uid)
+                .collection("requests")
+                .add(instruction)
+        )
+        .then(() => instruction)
+
+export const saveInstructionTask = (db: admin.firestore.Firestore) => tryCatchK(saveInstruction(db), (e): ErrorWithStatus => ({
+    status: 500,
+    msg: `Could not save the instruction, error ${(e as Error).toString()}`
+}))

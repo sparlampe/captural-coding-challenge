@@ -3,27 +3,23 @@ import {
     createHeaders,
     createPictureStream,
     getScaledPictureStreamTask,
-    getScalingInstruction, getVerifiedIdToken
+    getScalingInstruction, getVerifiedIdToken, saveInstructionTask
 } from "./utils/utils";
 import {pipe} from "fp-ts/lib/pipeable";
 import * as E from "fp-ts/lib/Either";
-import {fromEither, chain} from "fp-ts/lib/TaskEither";
+import {fromEither, chain, taskEither,map} from "fp-ts/lib/TaskEither";
 import * as admin from 'firebase-admin';
+import {sequenceT} from "fp-ts/lib/Apply";
 
-admin.initializeApp({
-    projectId: "capturalcodingchallenge"
-})
-
+admin.initializeApp()
+const db = admin.firestore();
 export const downscaleImage = functions.https.onRequest(async (req, res) => {
     
+    const tokenVerifier = (t: string) => admin.auth().verifyIdToken(t)
     const s = await pipe(
-        req,
-        getVerifiedIdToken((t) => admin.auth().verifyIdToken(t)),
-        chain((_) => pipe(
-            req.body,
-            getScalingInstruction,
-            E.map(createPictureStream),
-            fromEither)),
+        sequenceT(taskEither)(getVerifiedIdToken(tokenVerifier)(req), fromEither(getScalingInstruction(req.body))),
+        chain(([idToken, instruction]) => saveInstructionTask(db)(idToken, instruction)),
+        map(createPictureStream),
         chain(getScaledPictureStreamTask)
     )()
 
