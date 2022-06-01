@@ -30,7 +30,7 @@
     "monocle-ts": "^2.2.0",
     "newtype-ts": "^0.3.4",
     "pumpify": "^2.0.1",
-    "sharp": "^0.25.4",
+    "sharp": "^0.30.5",
     "uuid": "^8.2.0"
   },
   "devDependencies": {
