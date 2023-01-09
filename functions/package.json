@@ -20,7 +20,7 @@
     "@types/pumpify": "^1.4.1",
     "@types/sharp": "^0.25.0",
     "@types/uuid": "^8.0.0",
-    "firebase-admin": "^8.10.0",
+    "firebase-admin": "^11.4.1",
     "firebase-functions": "^3.6.1",
     "fp-ts": "^2.7.0",
     "got": "^11.5.0",
